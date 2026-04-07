@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>文件传输助手</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="传输助手">
+    <!-- 苹果图标 -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3661/3661330.png">
+    <style>
+        :root {
+            --wechat-green: #95ec69;
+            --bg-gray: #ededed;
+            --bubble-white: #ffffff;
+            --text-black: #000000;
+            --input-bg: #f7f7f7;
+        }
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-gray);
+            -webkit-user-select: none;
+        }
+        #app { display: flex; flex-direction: column; height: 100%; height: 100vh; }
+        
+        /* 标题栏 */
+        header {
+            background: var(--bg-gray);
+            height: 44px; display: flex; align-items: center; justify-content: center;
+            font-weight: bold; border-bottom: 1px solid #ddd;
+            padding-top: env(safe-area-inset-top);
+            flex-shrink: 0;
+        }
+        
+        /* 聊天区域 */
+        #chat-container {
+            flex: 1; overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column; gap: 15px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .msg { 
+            max-width: 80%; padding: 10px 14px; border-radius: 6px; 
+            font-size: 16px; line-height: 1.4; position: relative; 
+            word-wrap: break-word; user-select: text; -webkit-user-select: text;
+        }
+        .msg.left { align-self: flex-start; background: var(--bubble-white); color: var(--text-black); }
+        .msg.right { align-self: flex-end; background: var(--wechat-green); color: var(--text-black); }
+        
+        /* 底部输入框 */
+        footer {
+            background: var(--input-bg); padding: 10px; border-top: 1px solid #ddd;
+            display: flex; align-items: center; gap: 10px; 
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            flex-shrink: 0;
+        }
+        input {
+            flex: 1; border: none; padding: 10px; border-radius: 4px; 
+            font-size: 16px; outline: none; background: white;
+        }
+        button {
+            background: #07c160; color: white; border: none; padding: 8px 18px;
+            border-radius: 4px; font-weight: bold; font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        button:disabled { background: #ccc; opacity: 0.6; }
+        
+        /* 提示框 */
+        #toast {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
+            border-radius: 8px; display: none; z-index: 100; font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header>文件传输助手</header>
+    <div id="chat-container">
+        <div class="msg left">已连接。在此输入内容发送，将自动复制并同步到 Mac。</div>
+    </div>
+    <footer>
+        <input type="text" id="input" placeholder="输入消息..." autocomplete="off">
+        <button id="send-btn" disabled>发送</button>
+    </footer>
+</div>
+<div id="toast">已复制到剪贴板</div>
+
+<script>
+    const container = document.getElementById('chat-container');
+    const input = document.getElementById('input');
+    const btn = document.getElementById('send-btn');
+    const toast = document.getElementById('toast');
+
+    input.addEventListener('input', () => {
+        btn.disabled = !input.value.trim();
+    });
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // 1. 核心功能：自动复制
+        try {
+            await navigator.clipboard.writeText(text);
+            showToast();
+        } catch (err) {
+            console.error('复制失败', err);
+        }
+
+        // 2. 更新 UI
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'msg right';
+        msgDiv.textContent = text;
+        container.appendChild(msgDiv);
+
+        // 3. 重置
+        input.value = '';
+        btn.disabled = true;
+        container.scrollTop = container.scrollHeight;
+        
+        // 手机震动反馈
+        if (window.navigator.vibrate) {
+            window.navigator.vibrate(50);
+        }
+    }
+
+    function showToast() {
+        toast.style.display = 'block';
+        setTimeout(() => toast.style.display = 'none', 1500);
+    }
+
+    btn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+</script>
+</body>
+</html>
