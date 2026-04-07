@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>文件传输助手</title>
+    <title>文本输入助手</title>
     <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="传输助手">
-    <!-- 苹果图标 -->
+    <meta name="apple-mobile-web-app-title" content="输入助手">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3661/3661330.png">
+    
     <style>
         :root {
             --wechat-green: #95ec69;
@@ -17,76 +19,181 @@
             --bubble-white: #ffffff;
             --text-black: #000000;
             --input-bg: #f7f7f7;
+            --border-color: #d1d1d1;
         }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
             background-color: var(--bg-gray);
-            -webkit-user-select: none;
+            overflow: hidden; /* 防止整个页面滚动，由容器内部滚动 */
         }
-        #app { display: flex; flex-direction: column; height: 100%; height: 100vh; }
-        
-        /* 标题栏 */
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            /* 兼容 iOS 100vh 包含工具栏的问题 */
+            height: -webkit-fill-available; 
+        }
+
+        /* 标题栏 - 增加安全区域适配 */
         header {
             background: var(--bg-gray);
-            height: 44px; display: flex; align-items: center; justify-content: center;
-            font-weight: bold; border-bottom: 1px solid #ddd;
+            height: calc(44px + env(safe-area-inset-top));
             padding-top: env(safe-area-inset-top);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 17px;
+            border-bottom: 0.5px solid var(--border-color);
             flex-shrink: 0;
+            z-index: 100;
         }
-        
+
         /* 聊天区域 */
         #chat-container {
-            flex: 1; overflow-y: auto; padding: 15px;
-            display: flex; flex-direction: column; gap: 15px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            /* 丝滑滚动 */
             -webkit-overflow-scrolling: touch;
         }
-        .msg { 
-            max-width: 80%; padding: 10px 14px; border-radius: 6px; 
-            font-size: 16px; line-height: 1.4; position: relative; 
-            word-wrap: break-word; user-select: text; -webkit-user-select: text;
+
+        /* 气泡样式 */
+        .msg {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            line-height: 1.4;
+            position: relative;
+            word-wrap: break-word;
+            user-select: text;
+            -webkit-user-select: text;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .msg.left { align-self: flex-start; background: var(--bubble-white); color: var(--text-black); }
-        .msg.right { align-self: flex-end; background: var(--wechat-green); color: var(--text-black); }
-        
-        /* 底部输入框 */
+
+        .msg.left {
+            align-self: flex-start;
+            background: var(--bubble-white);
+            color: var(--text-black);
+        }
+
+        .msg.right {
+            align-self: flex-end;
+            background: var(--wechat-green);
+            color: var(--text-black);
+        }
+
+        /* 底部输入区 - 关键适配 */
         footer {
-            background: var(--input-bg); padding: 10px; border-top: 1px solid #ddd;
-            display: flex; align-items: center; gap: 10px; 
+            background: var(--input-bg);
+            border-top: 0.5px solid var(--border-color);
+            padding: 10px 15px;
+            /* 适配 iPhone 底部 Home 指示器 */
             padding-bottom: calc(10px + env(safe-area-inset-bottom));
+            display: flex;
+            align-items: flex-end; /* 文字多时向上扩展 */
+            gap: 10px;
             flex-shrink: 0;
         }
+
+        #input-wrapper {
+            flex: 1;
+            background: white;
+            border-radius: 6px;
+            padding: 2px 0;
+        }
+
         input {
-            flex: 1; border: none; padding: 10px; border-radius: 4px; 
-            font-size: 16px; outline: none; background: white;
+            width: 100%;
+            border: none;
+            padding: 8px 12px;
+            font-size: 16px; /* 防止 iOS 自动放大 */
+            outline: none;
+            background: transparent;
+            display: block;
         }
+
         button {
-            background: #07c160; color: white; border: none; padding: 8px 18px;
-            border-radius: 4px; font-weight: bold; font-size: 14px;
-            transition: opacity 0.2s;
+            background: #07c160;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 15px;
+            height: 36px;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
-        button:disabled { background: #ccc; opacity: 0.6; }
-        
+
+        button:active {
+            opacity: 0.7;
+        }
+
+        button:disabled {
+            background: #e1e1e1;
+            color: #b1b1b1;
+        }
+
         /* 提示框 */
         #toast {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 12px 24px;
-            border-radius: 8px; display: none; z-index: 100; font-size: 14px;
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.75);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 200;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+        }
+
+        /* 滚动条美化 */
+        #chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        #chat-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 2px;
         }
     </style>
 </head>
 <body>
+
 <div id="app">
-    <header>文件传输助手</header>
-    <div id="chat-container">
+    <header>文本输入助手</header>
+    
+    <div id="chat-container" id="chat-scroll">
         <div class="msg left">已连接。在此输入内容发送，将自动复制并同步到 Mac。</div>
     </div>
+
     <footer>
-        <input type="text" id="input" placeholder="输入消息..." autocomplete="off">
+        <div id="input-wrapper">
+            <input type="text" id="input" placeholder="请输入内容..." autocomplete="off">
+        </div>
         <button id="send-btn" disabled>发送</button>
     </footer>
 </div>
-<div id="toast">已复制到剪贴板</div>
+
+<div id="toast">已成功复制</div>
 
 <script>
     const container = document.getElementById('chat-container');
@@ -94,48 +201,75 @@
     const btn = document.getElementById('send-btn');
     const toast = document.getElementById('toast');
 
+    // 监听输入状态
     input.addEventListener('input', () => {
         btn.disabled = !input.value.trim();
     });
 
+    // 核心发送函数
     async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
-        // 1. 核心功能：自动复制
+        // 1. 自动复制到剪贴板
         try {
+            // 注意：必须由用户手势触发（click/keypress）
             await navigator.clipboard.writeText(text);
             showToast();
         } catch (err) {
-            console.error('复制失败', err);
+            console.error('复制失败:', err);
         }
 
-        // 2. 更新 UI
+        // 2. 更新消息列表
         const msgDiv = document.createElement('div');
         msgDiv.className = 'msg right';
         msgDiv.textContent = text;
         container.appendChild(msgDiv);
 
-        // 3. 重置
+        // 3. 清理与滚动
         input.value = '';
         btn.disabled = true;
-        container.scrollTop = container.scrollHeight;
-        
-        // 手机震动反馈
-        if (window.navigator.vibrate) {
-            window.navigator.vibrate(50);
+        scrollToBottom();
+
+        // 4. 轻微触感反馈
+        if ('vibrate' in navigator) {
+            navigator.vibrate(40);
         }
+    }
+
+    function scrollToBottom() {
+        // 使用 requestAnimationFrame 确保在 DOM 渲染后滚动
+        requestAnimationFrame(() => {
+            container.scrollTo({
+                top: container.scrollHeight,
+                behavior: 'smooth'
+            });
+        });
     }
 
     function showToast() {
         toast.style.display = 'block';
-        setTimeout(() => toast.style.display = 'none', 1500);
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 1200);
     }
 
+    // 绑定事件
     btn.addEventListener('click', sendMessage);
+    
     input.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
+        if (e.key === 'Enter') {
+            sendMessage();
+            input.blur(); // 发送后收起键盘（可选）
+        }
+    });
+
+    // 解决 iOS 软键盘弹出时布局被遮挡的问题
+    window.visualViewport.addEventListener('resize', () => {
+        document.body.style.height = window.visualViewport.height + 'px';
+        scrollToBottom();
     });
 </script>
+
 </body>
 </html>
