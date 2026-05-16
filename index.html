@@ -40,9 +40,11 @@
         #app {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            /* 兼容 iOS 100vh 包含工具栏的问题 */
-            height: -webkit-fill-available; 
+            height: 100%;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
 
         /* 标题栏 - 增加安全区域适配 */
@@ -181,7 +183,7 @@
 <div id="app">
     <header>文本输入助手</header>
     
-    <div id="chat-container" id="chat-scroll">
+    <div id="chat-container">
         <div class="msg left">已连接。在此输入内容发送，将自动复制并同步到 Mac。</div>
     </div>
 
@@ -238,12 +240,14 @@
     }
 
     function scrollToBottom() {
-        // 使用 requestAnimationFrame 确保在 DOM 渲染后滚动
+        // 使用 setTimeout 确保在键盘弹出动画完成后依然能滚动到底部
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
+        
+        // 同时也尝试立即滚动
         requestAnimationFrame(() => {
-            container.scrollTo({
-                top: container.scrollHeight,
-                behavior: 'smooth'
-            });
+            container.scrollTop = container.scrollHeight;
         });
     }
 
@@ -260,15 +264,30 @@
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessage();
-            input.blur(); // 发送后收起键盘（可选）
+            // input.blur(); // 发送后保持聚焦，方便连续输入
         }
     });
 
-    // 解决 iOS 软键盘弹出时布局被遮挡的问题
-    window.visualViewport.addEventListener('resize', () => {
-        document.body.style.height = window.visualViewport.height + 'px';
+    // 输入框聚焦时，确保滚动到底部
+    input.addEventListener('focus', () => {
         scrollToBottom();
     });
+
+    // 解决 iOS 软键盘弹出时布局被遮挡的问题
+    if (window.visualViewport) {
+        const app = document.getElementById('app');
+        const handleVisualViewportChange = () => {
+            app.style.height = window.visualViewport.height + 'px';
+            window.scrollTo(0, 0); // 确保 body 不会因为键盘弹出而偏移
+            scrollToBottom();
+        };
+        
+        window.visualViewport.addEventListener('resize', handleVisualViewportChange);
+        window.visualViewport.addEventListener('scroll', handleVisualViewportChange);
+        
+        // 初始化一次
+        handleVisualViewportChange();
+    }
 </script>
 
 </body>
