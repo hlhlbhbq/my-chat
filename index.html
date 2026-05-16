@@ -232,6 +232,7 @@
         input.value = '';
         btn.disabled = true;
         scrollToBottom();
+        input.focus(); // 保持聚焦，方便继续输入
 
         // 4. 轻微触感反馈
         if ('vibrate' in navigator) {
